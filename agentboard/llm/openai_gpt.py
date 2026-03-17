@@ -4,6 +4,7 @@ import time
 from common.registry import registry
 import pdb
 import tiktoken
+import json
 
 @registry.register_llm("gpt")
 class OPENAI_GPT:
@@ -33,6 +34,27 @@ class OPENAI_GPT:
         self.system_message = system_message
         self.init_api_key()
 
+    # #region agent log
+    def _agent_debug_log(self, hypothesis_id, location, message, data=None, run_id="pre-fix"):
+        """Lightweight NDJSON logger for debug mode."""
+        log_path = "/home/mz81/.cursor/debug-7ff043.log"
+        payload = {
+            "sessionId": "7ff043",
+            "id": f"log_{int(time.time()*1000)}",
+            "timestamp": int(time.time()*1000),
+            "location": location,
+            "message": message,
+            "data": data or {},
+            "runId": run_id,
+            "hypothesisId": hypothesis_id,
+        }
+        try:
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload) + "\n")
+        except Exception:
+            # Never let logging break the main flow
+            pass
+    # #endregion agent log
 
         
     def init_api_key(self):
@@ -47,14 +69,30 @@ class OPENAI_GPT:
             openai.api_base = os.environ['OPENAI_API_BASE'] if 'OPENAI_API_BASE' in os.environ else openai.api_base
 
     def llm_inference(self, messages):
-
-        response = openai.ChatCompletion.create(
-            model=self.engine, # engine = "deployment_name".
+        # Newer models (e.g. gpt-4o-mini, gpt-5-*) use max_completion_tokens.
+        kwargs = dict(
+            model=self.engine,
             messages=messages,
-            stop = self.stop,
-            temperature = self.temperature,
-            max_tokens = self.max_tokens,
         )
+
+        # Some newer models (including gpt-5-* / 2025-* family) no longer
+        # support the `stop` or non-default `temperature` parameters.
+        is_2025_family = self.engine.startswith("gpt-5-") or "2025" in self.engine
+
+        if not is_2025_family:
+            kwargs["stop"] = self.stop
+            kwargs["temperature"] = self.temperature
+
+        if (
+            self.engine.startswith("gpt-5-")
+            or "2025" in self.engine
+            or "gpt-4o-mini" in self.engine
+        ):
+            kwargs["max_completion_tokens"] = self.max_tokens
+        else:
+            kwargs["max_tokens"] = self.max_tokens
+
+        response = openai.ChatCompletion.create(**kwargs)
         return response['choices'][0]['message']['content']
 
     def generate(self, system_message, prompt):
@@ -69,13 +107,28 @@ class OPENAI_GPT:
             try:
                 return True, self.llm_inference(prompt) # return success, completion
             except Exception as e:
+                # Print the underlying error so it is visible in logs
+                print(e)
                 print(f"Error on attempt {attempt + 1}")
+                # #region agent log
+                self._agent_debug_log(
+                    hypothesis_id="H1",
+                    location="openai_gpt.py:generate",
+                    message="LLM call failed",
+                    data={
+                        "attempt": attempt + 1,
+                        "engine": self.engine,
+                        "error": str(e),
+                    },
+                    run_id="pre-fix",
+                )
+                # #endregion agent log
                 if attempt < self.max_retry_iters - 1:  # If not the last attempt
                     time.sleep(self.retry_delays)  # Wait before retrying
 
                 else:
                     print("Failed to get completion after multiple attempts.")
-                    # raise e
+                    # Keep returning failure flag instead of crashing the whole run
 
         return False, None
 

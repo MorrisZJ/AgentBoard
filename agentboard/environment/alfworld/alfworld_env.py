@@ -1,6 +1,7 @@
 from common.registry import registry
 import alfworld
 import alfworld.agents.environment
+from alfworld.agents.environment import get_environment
 import pdb
 import yaml
 import random
@@ -19,7 +20,7 @@ class AlfWorld:
                  ):
         with open(base_config) as reader:
             config = yaml.safe_load(reader)
-        env = getattr(alfworld.agents.environment, config["env"]["type"])(config, train_eval=split)
+        env = get_environment(config["env"]["type"])(config, train_eval=split)
         env.game_files.sort()
         self.env = env.init_env(batch_size)
         self.valid_actions = []
@@ -29,7 +30,7 @@ class AlfWorld:
         self.finished_sub_goal = []
         self.labeled_data = {}
         self.sub_goal = []
-        with open(label_path, 'r+', encoding='utf-8') as f:
+        with open(label_path, 'r', encoding='utf-8') as f:
             for item in jsonlines.Reader(f):
                 self.labeled_data[item["additional_info"]['description']] = item
         random.seed(seed)

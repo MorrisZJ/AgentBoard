@@ -35,6 +35,39 @@ llm:
       max_retry_iters: 15
       stop: "\n"
       use_parser: False
+  gpt-4o:
+      name: gpt
+      engine: gpt-4o
+      context_length: 8192
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
+  gpt-5-nano-2025-08-07:
+      name: gpt
+      engine: gpt-5-nano-2025-08-07
+      context_length: 8192
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
+  gpt-4o-mini:
+      name: gpt
+      engine: gpt-4o-mini
+      context_length: 4096
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
   gpt-35-turbo: # using gpt_azure llm would need azure versin of openai key
       name: gpt_azure
       engine: gpt-35-turbo
@@ -176,6 +209,18 @@ llm:
       dtype: float16
       ngpu: 2
       use_parser: True
+
+  llama3.1-8b-vllm-openai:
+      name: gpt
+      engine: meta-llama/Meta-Llama-3.1-8B-Instruct
+      context_length: 4096
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
 
 env:
   pddl:

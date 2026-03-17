@@ -286,6 +286,122 @@ python agentboard/eval_main.py \
 ```
 We now offer configuration for 12 SOTA LLM models (`gpt-4`,`gpt-3.5-turbo-0613`, `text-davinci-003`,`claude2`,`deepseek-67b`,`lemur-70b`, `mistral-7b`,`codellama-13b(34b)`,`llama2-13b(70b)`,`vicuna-13b-16k`) and a simple reflex agent based on act-only prompting. You could also customize your own [agents](https://github.com/hkust-nlp/AgentBoard/blob/main/assets/agent_customization.md) and [LLMs](https://github.com/hkust-nlp/AgentBoard/blob/main/assets/llm_customization.md). Models supported by [vLLM](https://github.com/vllm-project/vllm) should be generally supported in AgentBoard, while different models may require specific prompt templates.
 
+### 中文快速 Demo 脚本（推荐配置）
+
+本节给出在本仓库中实际验证过、可以直接运行的几条 Demo 命令，方便快速 sanity check。
+
+#### 1. 使用本地 vLLM（OpenAI 风格 API）跑 AlfWorld（3 个样本）
+
+前提：
+
+- 已经在本机启动了 vLLM 的 OpenAI 兼容服务，例如：
+
+  ```bash
+  vllm.entrypoints.openai.api_server \
+    --host 0.0.0.0 --port 8000 \
+    --model meta-llama/Meta-Llama-3.1-8B-Instruct
+  ```
+
+- 在 `AgentBoard/.env` 中设置（`PROJECT_PATH` 需改成你自己的路径）：
+
+  ```bash
+  OPENAI_API_KEY=EMPTY
+  OPENAI_API_BASE=http://127.0.0.1:8000/v1
+  PROJECT_PATH=/home/yourname/path/to/AgentBoard
+  ```
+
+- 已在 `eval_configs/main_results_all_tasks.yaml` 中使用如下模型配置（本 repo 示例已包含）：
+
+  ```yaml
+  llama3.1-8b-vllm-openai:
+      name: gpt
+      engine: meta-llama/Meta-Llama-3.1-8B-Instruct
+      context_length: 4096
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
+  ```
+
+运行（只评测 3 个样本，用于 debug）：
+
+```bash
+cd AgentBoard
+
+python agentboard/eval_main.py \
+  --cfg-path eval_configs/main_results_all_tasks.yaml \
+  --tasks alfworld \
+  --model llama3.1-8b-vllm-openai \
+  --log_path ./results/llama3.1-8b-vllm-openai-alfworld-debug \
+  --project_name eval-llama3.1-8b-vllm-openai-alfworld-debug \
+  --baseline_dir ./data/baseline_results \
+  --debug
+```
+
+#### 2. 使用 OpenAI `gpt-4o-mini` 跑 AlfWorld（3 个样本）
+
+前提：
+
+- 在 `AgentBoard/.env` 或 shell 中设置：
+
+  ```bash
+  OPENAI_API_KEY=你的真实 OpenAI Key
+  OPENAI_API_TYPE="open_ai"
+  # 如需自定义网关，可设置 OPENAI_API_BASE
+  ```
+
+- `eval_configs/main_results_all_tasks.yaml` 中已包含：
+
+  ```yaml
+  gpt-4o-mini:
+      name: gpt
+      engine: gpt-4o-mini
+      context_length: 4096
+      use_azure: False
+      temperature: 0.
+      top_p: 1
+      retry_delays: 20
+      max_retry_iters: 15
+      stop: "\n"
+      use_parser: False
+  ```
+
+运行命令：
+
+```bash
+cd AgentBoard
+
+python agentboard/eval_main.py \
+  --cfg-path eval_configs/main_results_all_tasks.yaml \
+  --tasks alfworld \
+  --model gpt-4o-mini \
+  --log_path ./results/gpt-4o-mini-alfworld-debug \
+  --project_name eval-gpt-4o-mini-alfworld-debug \
+  --baseline_dir ./data/baseline_results \
+  --debug
+```
+
+#### 3. BabyAI 任务（可选）
+
+如果你需要运行 `babyai` 任务，还需：
+
+- 安装 BabyAI（建议源码安装）：
+
+  ```bash
+  cd /somewhere
+  git clone https://github.com/mila-iqia/babyai.git
+  cd babyai
+  pip install -e .
+  ```
+
+- 本仓库中 `agentboard/environment/babyai_env.py` 已做以下适配：
+  - 使用 `gym.make(...)` 创建环境；
+  - 显式 `import babyai` 以注册 BabyAI 环境到 Gym。
+
+之后即可使用与上面相同的模型，通过 `--tasks babyai` 运行评测。
 
 ### Launch AgentBoard Analytical Evaluation Panel
 AgentBoard integrates illustrative [Weights&Bias](https://wandb.ai/site) visualization to help researchers better systematically analyze LLM agents. You can simply turn on `--wandb` switch in the arguments and customize the `project_name` and `baseline_dir` of your wandb project as the evaluation command above.

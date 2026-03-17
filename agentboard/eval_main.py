@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--project_name", required=False, default='', help="specify the project name for wandb")
     parser.add_argument("--baseline_dir", required=False, default='', help="specify the baseline loggings for wandb baseline comparison visualization")
     parser.add_argument("--max_num_steps", required=False, default=30, help="specify the maximum number of steps used to finish the problems")
+    parser.add_argument("--debug", action="store_true", help="run in debug mode (e.g., fewer examples per task)")
     args = parser.parse_args()
 
     return args
@@ -61,7 +62,7 @@ def load_config(cfg_path, args):
         run_config["project_name"] = args.project_name
     if args.baseline_dir != '':
         run_config["baseline_dir"] = args.baseline_dir
-        
+
     run_config["wandb"] = args.wandb
     run_config["max_num_steps"] = args.max_num_steps
     
@@ -90,7 +91,11 @@ def main():
     load_dotenv()  # take environment variables from .env., load openai api key, tool key, wandb key, project path...
 
     args = parse_args()
-    llm_config, agent_config, env_config, run_config = load_config(args.cfg_path, args) 
+    llm_config, agent_config, env_config, run_config = load_config(args.cfg_path, args)
+
+    # In debug mode, limit the number of evaluated examples per task to speed up iteration.
+    if args.debug:
+        run_config["num_exam"] = 3
     llm_config = llm_config[args.model]
     
     #---------------------------------------------- load llm -----------------------------------------------------

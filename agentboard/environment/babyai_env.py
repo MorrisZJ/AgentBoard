@@ -1,5 +1,6 @@
 import gym
 import gymnasium 
+import babyai  # ensure BabyAI environments are registered with gym
 import subprocess
 import os
 import re
@@ -34,8 +35,11 @@ class BabyAI(BaseEnvironment):
         self.game_name = game_name
         self.seed = seed
         self.game_config = game_config
-        
-        self.env = gymnasium.make(game_name)
+
+        # Use gym instead of gymnasium for BabyAI environments, since BabyAI
+        # registers its envs with gym (BabyAI-*-v0) and gymnasium.make(...) may
+        # not be able to find them.
+        self.env = gym.make(game_name)
         self.render_path = render_path
         self.need_render = need_render
         self.obs_to_reward = obs_to_reward
